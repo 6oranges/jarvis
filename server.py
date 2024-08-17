@@ -11,7 +11,7 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
     light_process = subprocess.Popen(['/home/tstander/python/bin/python', 'light.py'],stdin=subprocess.PIPE, text=True)
     def say(self, speak="", keep_listening=False,context={}):
         self.send_response(200)
-        json_data = json.dumps({"speak": speak,"await":keep_listening,"context":context})
+        json_data = json.dumps({"speak": speak,"keep_listening":keep_listening,"context":context})
         self.send_header("Content-type", "application/json")
         self.end_headers()
         self.wfile.write(bytes(json_data, "utf-8"))
@@ -32,12 +32,11 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
                 return self.illegal_request("Invalid JSON")
             if not isinstance(commands, list):
                 return self.illegal_request("Unexpected structure")
-            jarvis=False
+            to_say = ""
             for command in commands:
                 command=command.lower()
                 if not command.startswith("jarvis"):
                     continue
-                jarvis=True
                 if "light" in command and "turn" in command and "on" in command:
                     self.light_process.stdin.write("on\n")
                     self.light_process.stdin.flush()
@@ -55,9 +54,12 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
                     self.light_process.stdin.write("brightness " + brightness + "\n")
                     self.light_process.stdin.flush()
                     return self.say(speak="Setting brightness to " + brightness + " percent")
-            if not jarvis:
+                else:
+                    if to_say == "":
+                        to_say = "Javis doesn't know how to"+command.replace("jarvis","")
+            if to_say == "":
                 return self.say()
-            return self.say(speak="Javis doesn't know how to "+command[0])
+            return self.say(speak=to_say)
         else:
             # Handle other paths with a 404 Not Found
             self.send_response(404)
