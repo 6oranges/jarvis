@@ -1,21 +1,17 @@
-use axum::{
-    extract::State,
-    routing::post,
-    Json, Router, http::StatusCode, response::IntoResponse,
-};
-use serde::{Deserialize, Serialize};
-use std::{sync::{Arc, Mutex}, net::SocketAddr};
-use tokio::process::{Command, ChildStdin};
-use tokio::io::AsyncWriteExt;
+use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::post, Json, Router};
 use regex::Regex;
-
+use serde::{Deserialize, Serialize};
+use std::{net::SocketAddr, sync::Arc};
+use tokio::io::AsyncWriteExt;
+use tokio::process::{ChildStdin, Command};
+use tokio::sync::Mutex;
 static PORT: u16 = 8000;
 
 #[derive(Serialize)]
 struct AssistResponse {
     speak: String,
     keep_listening: bool,
-    context: Option<serde_json::Value>,
+    context: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -34,7 +30,7 @@ struct AppState {
 
 impl AppState {
     fn new() -> Self {
-        let mut child = Command::new("/home/tstander/python/bin/python")
+        let mut child = Command::new("python")
             .arg("light.py")
             .stdin(std::process::Stdio::piped())
             .spawn()
@@ -58,13 +54,10 @@ async fn main() {
         .route("/assist", post(handle_assist))
         .with_state(state);
 
-    // Specify the address and start the server
-    let addr = SocketAddr::from(([127, 0, 0, 1], PORT));
-    println!("Serving at port {}", PORT);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+    let listener = tokio::net::TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], PORT)))
         .await
         .unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 async fn handle_assist(
@@ -80,7 +73,7 @@ async fn handle_assist(
             continue;
         }
 
-        let mut state = state.lock().unwrap();
+        let mut state = state.lock().await;
 
         if command.contains("light") && command.contains("turn") && command.contains("on") {
             state.light_process.write_all(b"on\n").await.unwrap();
@@ -116,7 +109,10 @@ async fn handle_assist(
             }
         } else {
             if to_say.is_empty() {
-                to_say = format!("Jarvis doesn't know how to {}", command.replace("jarvis", ""));
+                to_say = format!(
+                    "Jarvis doesn't know how to {}",
+                    command.replace("jarvis ", "")
+                );
             }
         }
     }
@@ -127,13 +123,4 @@ async fn handle_assist(
         context: None,
     };
     (StatusCode::OK, Json(response))
-}
-
-async fn handle_rejection(
-    err: axum::Error,
-) -> impl IntoResponse {
-    let response = ErrorResponse {
-        error: format!("Unhandled error: {}", err),
-    };
-    (StatusCode::INTERNAL_SERVER_ERROR, Json(response))
 }
