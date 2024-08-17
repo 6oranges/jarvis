@@ -41,16 +41,17 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 commands = json.loads(post_data)
             except:
-                self.send_response(400)
+                self.send_response(200)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(b"Invalid request")
+                # Sent no data
+                self.wfile.write(b"")
                 return
             if not isinstance(commands, list):
                 self.send_response(400)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(b"Invalid request")
+                self.wfile.write(b"Invalid request B")
                 return
             for command in commands:
                 command=command.lower()
@@ -64,7 +65,7 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(b"Turning on light")
                     loop.run_until_complete(turn_on_device())
                     return
-                elif "light" in command and "turn" in command and "on" in command:
+                elif "light" in command and "turn" in command and "off" in command:
                     # Send a 200 OK response
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")
