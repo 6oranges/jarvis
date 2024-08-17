@@ -63,6 +63,7 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_header("Content-type", "text/html")
                     self.end_headers()
                     self.wfile.write(b"Turning on light")
+                    self.wfile.flush()
                     loop.run_until_complete(turn_on_device())
                     return
                 elif "light" in command and "turn" in command and "off" in command:
@@ -71,6 +72,7 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_header("Content-type", "text/html")
                     self.end_headers()
                     self.wfile.write(b"Turning off light")
+                    self.wfile.flush()
                     loop.run_until_complete(turn_off_device())
                     return
             # Handle other paths with a 404 Not Found
