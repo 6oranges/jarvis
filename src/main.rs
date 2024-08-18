@@ -14,11 +14,6 @@ struct AssistResponse {
     context: Option<String>,
 }
 
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: String,
-}
-
 #[derive(Deserialize)]
 struct CommandRequest {
     commands: Vec<String>,
