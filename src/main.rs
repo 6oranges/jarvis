@@ -25,7 +25,7 @@ struct AppState {
 
 impl AppState {
     fn new() -> Self {
-        let mut child = Command::new("python")
+        let mut child = Command::new("/home/tstander/python/bin/python")
             .arg("light.py")
             .stdin(std::process::Stdio::piped())
             .spawn()
@@ -102,13 +102,24 @@ async fn handle_assist(
                 };
                 return (StatusCode::OK, Json(response));
             }
-        } else {
-            if to_say.is_empty() {
-                to_say = format!(
-                    "Jarvis doesn't know how to {}",
-                    command.replace("jarvis ", "")
-                );
-            }
+        } else if command.contains("light") && command.contains("color") {
+            state
+                .light_process
+                .write_all(b"color 100 100 80\n")
+                .await
+                .unwrap();
+            state.light_process.flush().await.unwrap();
+            let response = AssistResponse {
+                speak: "Changing color".to_string(),
+                keep_listening: false,
+                context: None,
+            };
+            return (StatusCode::OK, Json(response));
+        } else if to_say.is_empty() {
+            to_say = format!(
+                "Jarvis doesn't know how to {}",
+                command.replace("jarvis ", "")
+            );
         }
     }
 
