@@ -27,13 +27,16 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/assist':
             print(f"POST data: {post_data}")
             try:
-                commands = json.loads(post_data)
+                data = json.loads(post_data)
+                commands = data["commands"]
             except:
                 return self.illegal_request("Invalid JSON")
             if not isinstance(commands, list):
                 return self.illegal_request("Unexpected structure")
             to_say = ""
             for command in commands:
+                if not isinstance(command, str):
+                    return self.illegal_request("Unexpected structure")
                 command=command.lower()
                 if not command.startswith("jarvis"):
                     continue
@@ -54,6 +57,36 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
                     self.light_process.stdin.write("brightness " + brightness + "\n")
                     self.light_process.stdin.flush()
                     return self.say(speak="Setting brightness to " + brightness + " percent")
+                elif "light" in command and "color" in command:
+                    table = {
+                        "white": (0, 0, 100),
+                        "silver": (0, 0, 75),
+                        "gray": (0, 0, 50),
+                        "red": (0, 100, 100),
+                        "maroon": (0, 100, 100),
+                        "yellow": (60, 100, 100),
+                        "olive": (60, 100, 50),
+                        "lime": (120, 100, 100),
+                        "green": (120, 100, 50),
+                        "aqua": (180, 100, 100),
+                        "teal": (180, 100, 50),
+                        "blue": (240, 100, 100),
+                        "navy": (240, 100, 50),
+                        "fuchsia": (300, 100, 100),
+                        "purple": (300, 100, 50),
+                    }
+                    for part in command.split():
+                        if part in table:
+                            h,s,v = table[part]
+                            self.light_process.stdin.write(f"color {h} {s} {v}\n")
+                            self.light_process.stdin.flush()
+                            return self.say(speak="Changing color to " + part)
+                    numbers = re.findall(r'\d+',command)
+                    if len(numbers) == 3:
+                        self.light_process.stdin.write(f"color {numbers[0]} {numbers[1]} {numbers[2]}\n")
+                        self.light_process.stdin.flush()
+                        return self.say(speak="Changing color to " + numbers[0] + " " + numbers[1] + " " + numbers[2])
+                    return self.say("I don't know that color")
                 else:
                     if to_say == "":
                         to_say = "Javis doesn't know how to"+command.replace("jarvis","")

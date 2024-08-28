@@ -29,6 +29,10 @@ async def set_brightness(dev, brightness):
     await dev._set_brightness(brightness)
     await dev.update()
     print("Device brightness set to", brightness)
+async def set_color(dev, h, s, v):
+    await dev._set_hsv(h, s, v)
+    await dev.update()
+    print("Device color set to", h, s, v)
 async def process(dev,ip_address,command):
     if command[0]=="on":
         await turn_on_device(dev)
@@ -38,6 +42,8 @@ async def process(dev,ip_address,command):
         await set_brightness(dev, int(command[1]))
     elif command[0]=="connect":
         dev,ip_address = await get_device()
+    elif command[0]=="color":
+        await set_color(dev, int(command[1]), int(command[2]), int(command[3]))
     return dev,ip_address
 async def main(ip_address):
     dev,ip_address = await get_device(ip_address)
